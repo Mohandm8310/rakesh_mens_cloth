@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% block title %}Admin - Rakesh Mens Wear{% endblock %}{% block body %}
+<div class="admin-top"><div><div class="eyebrow" style="color:var(--green)">Store control room</div><h1><span class="dot on"></span>Live dashboard</h1></div><span class="mut">Updates every 5 seconds</span></div>
+<div class="admin-note">Two administrator accounts maximum. Create staff credentials from the private command line; customers cannot create administrator accounts.</div>
+<div class="kpis"><div class="kpi"><span class="mut">Registered customers</span><b id="kReg">0</b></div>
+<div class="kpi"><span class="mut">Total logins</span><b id="kLog">0</b></div>
+<div class="kpi"><span class="mut">Online now</span><b id="kOn">0</b></div>
+<div class="kpi"><span class="mut">Orders</span><b id="kOrd">0</b></div>
+<div class="kpi"><span class="mut">Order value</span><b id="kRev">0</b></div>
+<div class="kpi"><span class="mut">Low stock items</span><b id="kLow">0</b></div></div>
+<h2>Customers</h2><div class="wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Logins</th><th>Last seen</th><th>Status</th></tr></thead><tbody id="cust"></tbody></table></div>
+<div class="section-head"><h2>Recent logins</h2></div><div class="wrap"><table><thead><tr><th>Account</th><th>Role</th><th>Time</th></tr></thead><tbody id="lg"></tbody></table></div>
+<div class="section-head"><h2>Recent orders</h2></div><div class="wrap"><table><thead><tr><th>Customer</th><th>Items</th><th>Delivery contact</th><th>Address</th><th>Total</th><th>Time</th></tr></thead><tbody id="ord"></tbody></table></div>
+<div class="section-head"><div><div class="eyebrow" style="color:var(--green)">Inventory</div><h2 style="margin:4px 0">Add a product</h2></div></div>
+<form method="post" action="/admin/products/add" enctype="multipart/form-data" class="form-grid"><input type="hidden" name="csrf" value="{{ csrf() }}">
+<div><label>Name</label><input name="name" required maxlength="80"></div><div><label>Category</label><input name="category" required maxlength="40"></div>
+<div><label>Price (₹)</label><input name="price" type="number" min="1" required></div><div><label>Discount % (0-90)</label><input name="discount" type="number" min="0" max="90" value="0"></div>
+<div><label>Stock</label><input name="stock" type="number" min="0" required></div>
+<div><label>Sizes (comma separated)</label><input name="sizes" value="S,M,L,XL,XXL"></div><div><label>Photo (PNG/JPG/WEBP, max 3 MB)</label><input name="image" type="file" accept="image/png,image/jpeg,image/webp"></div>
+<div style="align-self:end"><button class="p">Add product</button></div></form>
+<div class="section-head"><div><div class="eyebrow" style="color:var(--green)">Manage collection</div><h2 style="margin:4px 0">Products</h2></div><span class="mut">Edit details and save each item</span></div><div class="wrap"><table><thead><tr><th>Photo</th><th>Name</th><th>Category</th><th>Price ₹</th><th>Discount %</th><th>Sale ₹</th><th>Stock</th><th>Sizes</th><th>New photo</th><th>Shown</th><th></th></tr></thead><tbody>
+{% for p in products %}<tr>
+<td>{% if p['image'] %}<img src="{{ url_for('static', filename='uploads/' + p['image']) }}" alt="" width="44" height="44" style="object-fit:cover">{% else %}-{% endif %}</td>
+<td><input form="f{{ p['id'] }}" name="name" value="{{ p['name'] }}" style="width:150px"></td>
+<td><input form="f{{ p['id'] }}" name="category" value="{{ p['category'] }}" style="width:100px"></td>
+<td><input form="f{{ p['id'] }}" name="price" type="number" min="1" value="{{ p['price'] }}"></td>
+<td><input form="f{{ p['id'] }}" name="discount" type="number" min="0" max="90" value="{{ p['discount'] }}" style="width:70px"></td>
+<td>{{ p['price'] * (100 - p['discount']) // 100 }}</td>
+<td><input form="f{{ p['id'] }}" name="stock" type="number" min="0" value="{{ p['stock'] }}" style="width:70px"></td>
+<td><input form="f{{ p['id'] }}" name="sizes" value="{{ p['sizes'] }}" style="width:110px"></td>
+<td><input form="f{{ p['id'] }}" name="image" type="file" accept="image/png,image/jpeg,image/webp" style="width:150px"></td>
+<td>{{ 'Yes' if p['active'] else 'Hidden' }}</td>
+<td><form id="f{{ p['id'] }}" class="inline" method="post" enctype="multipart/form-data" action="/admin/products/{{ p['id'] }}/update"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="p">Save</button></form>
+<form class="inline" method="post" action="/admin/products/{{ p['id'] }}/toggle"><input type="hidden" name="csrf" value="{{ csrf() }}"><button>{{ 'Hide' if p['active'] else 'Show' }}</button></form>
+<form class="inline" method="post" action="/admin/products/{{ p['id'] }}/delete" onsubmit="return confirm('Delete this product permanently?')"><input type="hidden" name="csrf" value="{{ csrf() }}"><button class="d">Delete</button></form></td></tr>{% endfor %}
+</tbody></table></div>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const t=x=>new Date(x*1000).toLocaleString(),$=i=>document.getElementById(i);
+async function tick(){try{const r=await fetch("/api/admin/stats");if(!r.ok)return;const s=await r.json();
+$("kReg").textContent=s.registered;$("kLog").textContent=s.total_logins;$("kOn").textContent=s.online;$("kOrd").textContent=s.orders;
+$("kRev").textContent="₹"+s.revenue.toLocaleString("en-IN");$("kLow").textContent=s.low_stock;
+$("cust").innerHTML=s.customers.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.email)}</td><td>${c.n}</td><td>${c.last_seen?t(c.last_seen):"never"}</td><td><span class="dot ${c.online?"on":""}"></span>${c.online?"Online":"Offline"}</td></tr>`).join("")||"<tr><td>No customers yet</td></tr>";
+$("lg").innerHTML=s.logins.map(l=>`<tr><td>${esc(l.name)}</td><td>${esc(l.role)}</td><td>${t(l.ts)}</td></tr>`).join("")||"<tr><td colspan=3>No logins yet</td></tr>";
+$("ord").innerHTML=s.recent_orders.map(o=>`<tr><td>${esc(o.name)}</td><td>${esc(o.items)}</td><td>${esc(o.phone||'—')}</td><td>${esc(o.address||'—')}</td><td>₹${o.total.toLocaleString("en-IN")}</td><td>${t(o.ts)}</td></tr>`).join("")||"<tr><td colspan=6>No orders yet</td></tr>"}catch(e){}}
+tick();setInterval(tick,5000);
+</script>{% endblock %}

@@ -1,0 +1,6 @@
+shop.db
+.secret_key
+static/uploads/*
+!static/uploads/.keep
+__pycache__/
+venv/

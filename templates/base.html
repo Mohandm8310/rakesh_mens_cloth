@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Rakesh Mens Wear{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head><body>
+<header><a class="brand" href="/">RAKESH <span>MENSWEAR</span></a><nav>
+{% if user %}<span class="mut">Hi, {{ user['name'] }}</span>
+{% if user['role']=='admin' %}<a href="/admin">Admin</a>{% endif %}
+<form class="inline" method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf() }}"><button>Log out</button></form>
+{% else %}<a href="/login">Sign in</a><a href="/register">Sign up</a>{% endif %}
+</nav></header><main>
+{% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}
+{% block body %}{% endblock %}</main>{% if user %}<script>setInterval(()=>fetch("/api/ping",{method:"POST",headers:{"X-CSRF":"{{ csrf() }}"}}),30000);</script>{% endif %}</body></html>
